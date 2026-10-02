@@ -55,6 +55,25 @@ pnpm run install:skill            # 默认写入 ~/.dsh/skills，可用 DSH_SKIL
 
 目标位置已存在同名**普通目录**时脚本会拒绝替换；已存在的链接只有在指向本仓库时才会被重建。移除时删掉 `~/.dsh/skills/laya-go-decision` 这个链接即可。
 
+## 设置界面
+
+插件自带一个设置页，用来改最常配错的三项——**启动器路径**、工作目录、服务地址——不用去手写 YAML：
+
+**设置 → 插件（Plugins）→ `dsh-laya-go-decision` → 该行的「配置」**
+
+| 字段 | 写入的 config 键 | 留空表示 |
+|---|---|---|
+| 启动器路径 | `executable` | 回退到出厂默认（PATH 中的 `layatrt-server.exe`） |
+| 工作目录 | `serverCwd` | 使用 DSH 进程目录 |
+| 服务地址 | `baseUrl` | `http://127.0.0.1:8420` |
+
+- **保存**通过 Plugins 页的 `plugins.row.config` 通道写进 profile 的 `cordis.patch.yml`——和手写的是同一份文档，所以手改与界面改不会各说一套。
+- **保存后会重新加载这一行**：正在运行的 launcher 会用新配置重启，旧进程由插件的 effect 收掉，不残留（换 exe 路径时这正是想要的行为）。
+- **恢复默认** = `unset` 这几个键，回到随插件发布的默认值。
+- Host 不可写（配置不落盘的 memory 模式）时表单整体禁用。
+
+浏览器半侧是在 DSH 启动时随其他客户端插件一起扫描进启动图的，因此**装好或改完 `dsh.client` 后需要重启 DSH** 才会出现这个设置页；`lib/client.js` 已经随包提交，`link:` 安装无需重新构建。
+
 ## 配置
 
 所有可调项都在插件行里，默认值写在 schemastery schema 中；override 时**整行 config 会被替换**，因此要重述保留的键。
@@ -185,13 +204,18 @@ export function apply(ctx: Context) {
 
 ```powershell
 pnpm install
-pnpm typecheck     # tsc --noEmit，严格的 exactOptionalPropertyTypes / noUncheckedIndexedAccess
-pnpm build         # 产出 lib/（main: lib/index.js）
-pnpm test          # node --test：48 个用例
+pnpm typecheck     # tsc --noEmit，宿主半侧与浏览器半侧分别用 tsconfig.json / tsconfig.client.json
+pnpm build         # tsc 产出宿主半侧（lib/index.js + lib/host/* + .d.ts）；tsdown 产出 lib/client.js
+pnpm test          # node --test：52 个用例（含浏览器 bundle 的模块契约）
 pnpm check         # typecheck + build + test
 ```
 
-`lib/` 是**提交进仓库的构建产物**（与本目录其他 DSH 插件一致），这样 `link:` 与 `github:` 安装都能直接解析到入口；因此改完 `src/` 必须重新 `pnpm build` 再提交，避免产物与源码漂移。`package.json` 同时提供 `prepare`，从 git 安装时会自行构建。
+`lib/` 是**提交进仓库的构建产物**（与本目录其他 DSH 插件一致），这样 `link:` 与 `github:` 安装都能直接解析到入口；因此改完 `src/` 必须重新 `pnpm build` 再提交，避免产物与源码漂移。
+
+两个半侧的构建归属是明确的，避免两个工具写同一个文件：
+
+- **宿主半侧归 `tsc`**：`lib/index.js`、`lib/host/*`，以及 `exports.types` 指向的声明文件。因此 `tsconfig.build.json` 只包含宿主入口。
+- **浏览器半侧归 `tsdown`**：`lib/client.js` 是客户端模块系统的 lazy-CJS factory（`window.__ModuleLoader__.load({ id, factory })`），由 `scripts/build-client.mjs` 调用 harness 里的共享预设生成——那个预设不在任何已发布的 npm 包里，所以这一步只能在有 `deepseek-harness` checkout 的机器上跑，产物随仓库提交。`prepare` 只构建宿主半侧，因此消费者从 git 安装也能正常工作，不会去跑一个本机无法满足的客户端构建。
 
 测试用真实的 `node:http` 假 Launcher 与 `ctx.subprocess` 替身覆盖：协议解析与错误映射、超时/中止、领用与停止拒绝、就绪/失败/空闲/超时四种启动结局、进程提前退出并带 stderr 诊断、并发上限、状态大小与题型校验、卸载无残留。
 
@@ -208,6 +232,7 @@ node scripts/smoke.mjs --server C:\Users\lingxin\Documents\laya-trt\layatrt-serv
 ```
 src/
 ├── index.ts               # 插件入口：name / inject / Config / apply
+├── client/index.ts        # 浏览器半侧：本行配置页（plugins.row.config）
 └── host/
     ├── config.ts          # Config schema、归一化、--addr 推导
     ├── errors.ts          # LayaGoError 与稳定错误码
@@ -217,7 +242,10 @@ src/
     ├── service.ts         # ctx.layaGoDecision：校验、并发、决策与状态
     └── tools/             # 三个模型工具
 skills/laya-go-decision/   # 面向 Agent 的配套 Skill
-tests/                     # node --test（假 Launcher + 假 subprocess）
+tests/                     # node --test（假 Launcher + 假 subprocess + 浏览器 bundle 契约）
 scripts/smoke.mjs          # 对真实 Launcher 的端到端脚本
 scripts/install-skill.mjs  # 把配套 Skill 链接进 ~/.dsh/skills
+scripts/build-client.mjs   # 用 harness 的共享预设构建 lib/client.js
+tsdown.config.ts           # 客户端构建配置（只保留浏览器半侧）
+tsconfig.client.json       # 浏览器半侧的 typecheck（带 DOM lib）
 ```

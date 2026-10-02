@@ -90,4 +90,5 @@ When **every** answer in a call comes back uncertain, suspect the input rather t
 
 - Tools: `laya_go_decide`, `laya_go_status`, `laya_go_server` (plugin `laya-go-decision`, service `ctx.layaGoDecision`).
 - Configuration lives in the plugin row: `mode` (`managed`/`external`), `baseUrl`, `executable`, `args`, `autoStart`, `startTimeoutMs`, `requestTimeoutMs`, `maxConcurrent`, `maxQuestions`, `maxStateChars`, `confidenceThreshold`.
+- A human can set the launcher path, working directory, and base URL from **Settings → Plugins → `dsh-laya-go-decision` → the row's configure page** instead of editing the profile patch by hand; saving reloads the row and restarts the launcher with the new values.
 - Source and full field reference: <https://github.com/Ling0727-ai/dsh-laya-go-decision>.

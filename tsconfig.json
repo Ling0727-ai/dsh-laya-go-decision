@@ -18,5 +18,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/index.ts", "src/host/**/*.ts"]
 }
