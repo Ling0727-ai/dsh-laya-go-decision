@@ -110,9 +110,9 @@ export interface LayaServerStopResult {
 
 /** Everything the service needs from the plugin entry. */
 export interface LayaRuntime {
-  readonly config: NormalizedConfig
-  readonly client: LayaClient
-  readonly supervisor: LayaServerSupervisor
+  config: NormalizedConfig
+  client: LayaClient
+  supervisor: LayaServerSupervisor
 }
 
 /** Maximum accepted length of a question id. */
@@ -277,6 +277,15 @@ export class LayaGoDecisionService extends Service {
   /** Normalized plugin configuration. */
   get config(): NormalizedConfig {
     return this.runtime.config
+  }
+
+  /** Replace the runtime after a volatile config update, disposing the old launcher first. */
+  async replaceRuntime(next: LayaRuntime): Promise<void> {
+    const previous = this.runtime.supervisor
+    if (previous !== next.supervisor) await previous.dispose()
+    this.runtime.config = next.config
+    this.runtime.client = next.client
+    this.runtime.supervisor = next.supervisor
   }
 
   /**

@@ -62,7 +62,7 @@ export interface LayaStopOutcome {
 }
 /** What the supervisor needs from its host plugin. */
 export interface LayaServerDeps {
-    readonly config: NormalizedConfig;
+    config: NormalizedConfig;
     readonly client: LayaClient;
     readonly logger: LayaLogger;
     /** Read `ctx.subprocess` lazily: external mode never needs it. */

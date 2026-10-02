@@ -10,6 +10,7 @@
  * @module dsh-laya-go-decision/host/config
  */
 
+import type { Volatile } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
 import { LayaGoError } from './errors.ts'
 
@@ -21,13 +22,13 @@ export interface Config {
   /** `managed` starts and stops the launcher; `external` never spawns anything. */
   mode: LayaGoMode
   /** Origin (and optional path prefix) of the Laya HTTP API, for example `http://127.0.0.1:8420`. */
-  baseUrl: string
+  baseUrl: Volatile<string>
   /** Launcher executable: an absolute path, or a bare name resolved against `PATH`. */
-  executable: string
+  executable: Volatile<string>
   /** Launcher flags; `--addr` is derived from `baseUrl` unless present here. */
   args: string[]
   /** Working directory for the launcher process. Defaults to the harness process directory. */
-  serverCwd?: string
+  serverCwd?: Volatile<string | undefined>
   /** Extra environment entries for the launcher process (merged after the harness's scrub). */
   env?: Record<string, string>
   /** Start the launcher on the first call that needs a model. */
@@ -60,13 +61,13 @@ export interface Config {
 export const Config: Schema<Config> = Schema.object({
   mode: Schema.union(['managed', 'external']).default('managed')
     .description('managed starts the launcher process; external only talks to one already running.'),
-  baseUrl: Schema.string().default('http://127.0.0.1:8420')
+  baseUrl: Schema.string().default('http://127.0.0.1:8420').volatile()
     .description('Origin (and optional path prefix) of the Laya HTTP API.'),
-  executable: Schema.string().default('layatrt-server.exe')
+  executable: Schema.string().default('layatrt-server.exe').volatile()
     .description('Launcher executable: an absolute path, or a bare name resolved against PATH.'),
   args: Schema.array(Schema.string()).default([])
     .description('Launcher flags; --addr is derived from baseUrl unless present here.'),
-  serverCwd: Schema.string()
+  serverCwd: Schema.string().volatile()
     .description('Working directory for the launcher process.'),
   env: Schema.dict(Schema.string()).default({})
     .description('Extra environment entries for the launcher process.'),
@@ -94,7 +95,7 @@ export const Config: Schema<Config> = Schema.object({
     .description('Bearer token for the launcher admin endpoints, when one is configured.'),
   logBytes: Schema.natural().min(256).default(16_384)
     .description('Bytes of launcher stdout/stderr retained for diagnostics.'),
-})
+}) as unknown as Schema<Config>
 
 /** Configuration after validation and normalization: every derived value resolved. */
 export interface NormalizedConfig {
@@ -159,9 +160,18 @@ function parseBaseUrl(raw: string): { baseUrl: string; endpoint: string } {
  * @returns the same configuration with derived values resolved.
  * @throws LayaGoError `invalid_config` for an unusable base URL.
  */
+function volatileValue<T>(value: T | Volatile<T>): T {
+  return typeof value === 'object' && value !== null && 'get' in value && typeof value.get === 'function'
+    ? value.get() as T
+    : value as T
+}
+
 export function normalizeConfig(config: Config): NormalizedConfig {
-  const { baseUrl, endpoint } = parseBaseUrl(config.baseUrl)
-  const executable = config.executable.trim()
+  const baseUrlValue = volatileValue(config.baseUrl)
+  const executableValue = volatileValue(config.executable)
+  const serverCwdValue = config.serverCwd === undefined ? undefined : volatileValue(config.serverCwd)
+  const { baseUrl, endpoint } = parseBaseUrl(baseUrlValue)
+  const executable = executableValue.trim()
   if (executable === '') {
     throw new LayaGoError('invalid_config', 'executable must not be empty', {
       hint: 'Point it at the Laya Go Launcher binary, for example C:\\laya-go-launcher\\layatrt-server.exe.',
@@ -177,7 +187,7 @@ export function normalizeConfig(config: Config): NormalizedConfig {
     endpoint,
     executable,
     args: [...config.args],
-    serverCwd: config.serverCwd === undefined || config.serverCwd.trim() === '' ? undefined : config.serverCwd,
+    serverCwd: serverCwdValue === undefined || serverCwdValue.trim() === '' ? undefined : serverCwdValue,
     env,
     autoStart: config.autoStart,
     startTimeoutMs: Math.max(1000, Math.floor(config.startTimeoutMs)),

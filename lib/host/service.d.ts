@@ -98,9 +98,9 @@ export interface LayaServerStopResult {
 }
 /** Everything the service needs from the plugin entry. */
 export interface LayaRuntime {
-    readonly config: NormalizedConfig;
-    readonly client: LayaClient;
-    readonly supervisor: LayaServerSupervisor;
+    config: NormalizedConfig;
+    client: LayaClient;
+    supervisor: LayaServerSupervisor;
 }
 /**
  * Validate caller-written questions and translate them into the Laya wire shape.
@@ -124,6 +124,8 @@ export declare class LayaGoDecisionService extends Service {
     constructor(ctx: Context, runtime: LayaRuntime);
     /** Normalized plugin configuration. */
     get config(): NormalizedConfig;
+    /** Replace the runtime after a volatile config update, disposing the old launcher first. */
+    replaceRuntime(next: LayaRuntime): Promise<void>;
     /**
      * Answer typed questions about one state in a single forward pass.
      * @param state - the text to decide about.

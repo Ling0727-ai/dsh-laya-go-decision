@@ -93,7 +93,7 @@ declare module '@deepseek-ai/cordis' {
  * @param config - loader-validated plugin configuration.
  */
 export function apply(ctx: Context, config: LayaGoConfig): void {
-  const { config: normalized, client, supervisor } = createServerRuntime(
+  const runtime = createServerRuntime(
     config,
     ctx.logger,
     () => ctx.get('subprocess'),
@@ -101,7 +101,23 @@ export function apply(ctx: Context, config: LayaGoConfig): void {
   // The launcher process is not a Cordis resource, so its lifetime is an effect:
   // unloading the plugin (or hot-replacing its config) terminates the managed
   // process range.
-  ctx.effect(() => () => supervisor.dispose())
-  const service = new LayaGoDecisionService(ctx, { config: normalized, client, supervisor })
+  ctx.effect(() => () => runtime.supervisor.dispose())
+  const service = new LayaGoDecisionService(ctx, runtime)
   registerLayaGoTools(ctx, service)
+
+  // Config forms update volatile fields in place. Rebuild the HTTP client and
+  // supervisor from the new values, dispose the old process, and keep the same
+  // service/tool registrations alive for the next call.
+  let updateTail: Promise<void> = Promise.resolve()
+  if (typeof (ctx as unknown as { on?: unknown }).on === 'function') {
+    const onVolatileUpdate = ctx.on as unknown as (event: string, listener: () => void) => unknown
+    onVolatileUpdate('loader/volatile-update', () => {
+    updateTail = updateTail.then(async () => {
+      const next = createServerRuntime(config, ctx.logger, () => ctx.get('subprocess'))
+      await service.replaceRuntime(next)
+    }).catch(error => {
+      ctx.logger.error(`laya-go-decision: volatile settings update failed: ${error instanceof Error ? error.message : String(error)}`)
+    })
+    })
+  }
 }

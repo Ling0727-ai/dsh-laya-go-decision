@@ -9,6 +9,7 @@
  *
  * @module dsh-laya-go-decision/host/config
  */
+import type { Volatile } from '@deepseek-ai/cordis';
 import Schema from '@deepseek-ai/schemastery';
 /** `managed` starts the launcher process; `external` only talks to one already running. */
 export type LayaGoMode = 'managed' | 'external';
@@ -17,13 +18,13 @@ export interface Config {
     /** `managed` starts and stops the launcher; `external` never spawns anything. */
     mode: LayaGoMode;
     /** Origin (and optional path prefix) of the Laya HTTP API, for example `http://127.0.0.1:8420`. */
-    baseUrl: string;
+    baseUrl: Volatile<string>;
     /** Launcher executable: an absolute path, or a bare name resolved against `PATH`. */
-    executable: string;
+    executable: Volatile<string>;
     /** Launcher flags; `--addr` is derived from `baseUrl` unless present here. */
     args: string[];
     /** Working directory for the launcher process. Defaults to the harness process directory. */
-    serverCwd?: string;
+    serverCwd?: Volatile<string | undefined>;
     /** Extra environment entries for the launcher process (merged after the harness's scrub). */
     env?: Record<string, string>;
     /** Start the launcher on the first call that needs a model. */
@@ -81,12 +82,6 @@ export interface NormalizedConfig {
     /** Short timeout for the "is anything there?" probe. */
     readonly probeTimeoutMs: number;
 }
-/**
- * Validate and normalize one loader-resolved configuration.
- * @param config - configuration with schema defaults applied.
- * @returns the same configuration with derived values resolved.
- * @throws LayaGoError `invalid_config` for an unusable base URL.
- */
 export declare function normalizeConfig(config: Config): NormalizedConfig;
 /**
  * Build the launcher argv tail, keeping `baseUrl` the single source of truth for

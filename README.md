@@ -70,6 +70,7 @@ pnpm run install:skill            # 默认写入 ~/.dsh/skills，可用 DSH_SKIL
 - **保存**通过 Plugins 页的 `plugins.row.config` 通道写进 profile 的 `cordis.patch.yml`——和手写的是同一份文档，所以手改与界面改不会各说一套。
 - **保存后会重新加载这一行**：正在运行的 launcher 会用新配置重启，旧进程由插件的 effect 收掉，不残留（换 exe 路径时这正是想要的行为）。
 - **恢复默认** = `unset` 这几个键，回到随插件发布的默认值。
+- 这三个字段是 DSH 的 **volatile 配置**：保存后不需要重新安装插件；Host 先终止旧 launcher，再把同一个工具服务切换到新路径/地址，下一次调用直接使用新配置。
 - Host 不可写（配置不落盘的 memory 模式）时表单整体禁用。
 
 浏览器半侧是在 DSH 启动时随其他客户端插件一起扫描进启动图的，因此**装好或改完 `dsh.client` 后需要重启 DSH** 才会出现这个设置页；`lib/client.js` 已经随包提交，`link:` 安装无需重新构建。

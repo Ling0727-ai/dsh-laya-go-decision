@@ -18,8 +18,8 @@ test('exports the DSH plugin surface', () => {
 test('config schema carries the documented defaults', () => {
   const config = Config({})
   assert.equal(config.mode, 'managed')
-  assert.equal(config.baseUrl, 'http://127.0.0.1:8420')
-  assert.equal(config.executable, 'layatrt-server.exe')
+  assert.equal(config.baseUrl.get(), 'http://127.0.0.1:8420')
+  assert.equal(config.executable.get(), 'layatrt-server.exe')
   assert.deepEqual(config.args, [])
   assert.equal(config.autoStart, true)
   assert.equal(config.startTimeoutMs, 180_000)
