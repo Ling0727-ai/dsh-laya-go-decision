@@ -43,6 +43,18 @@ dsh --profile desktop --dump-config     # 应出现 "# == dsh-laya-go-decision" 
 
 插件包声明了 `dsh.bundle.patch`，所以 `dsh plugin add` 会把它同时写进 `dsh.profile.bundles` 并激活 `cordis.patch.yml` 这一层。
 
+## 配套 Skill
+
+仓库自带一份面向 Agent 的使用手册：[skills/laya-go-decision/SKILL.md](skills/laya-go-decision/SKILL.md)。工具 schema 只说明「怎么调」，这份 Skill 说明「什么时候值得调、怎么问才问得准、答案怎么读」——包括三种题型的写法与边界描述、`confidence`（归一化熵）与 `certain` 的区别、`noul` 要读方向而不是只看 confidence、整批都不确定时该怀疑输入、`state` 从右侧截断的应对，以及失败码对应的动作。它同时写明了那条最重要的限制：当前 checkpoint 是英文的，中文 `choice` 可能塌成近似均匀分布。
+
+安装（链接方式接入，不复制，`git pull` 即更新）：
+
+```powershell
+pnpm run install:skill            # 默认写入 ~/.dsh/skills，可用 DSH_SKILLS_DIR 覆盖
+```
+
+目标位置已存在同名**普通目录**时脚本会拒绝替换；已存在的链接只有在指向本仓库时才会被重建。移除时删掉 `~/.dsh/skills/laya-go-decision` 这个链接即可。
+
 ## 配置
 
 所有可调项都在插件行里，默认值写在 schemastery schema 中；override 时**整行 config 会被替换**，因此要重述保留的键。
@@ -204,6 +216,8 @@ src/
     ├── supervisor.ts      # 受管进程：启动/领用/就绪/终止
     ├── service.ts         # ctx.layaGoDecision：校验、并发、决策与状态
     └── tools/             # 三个模型工具
+skills/laya-go-decision/   # 面向 Agent 的配套 Skill
 tests/                     # node --test（假 Launcher + 假 subprocess）
 scripts/smoke.mjs          # 对真实 Launcher 的端到端脚本
+scripts/install-skill.mjs  # 把配套 Skill 链接进 ~/.dsh/skills
 ```
