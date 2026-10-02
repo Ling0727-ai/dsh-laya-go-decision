@@ -1,0 +1,29 @@
+# The bundle layer this plugin contributes when a profile lists it.
+#
+# One host-plane row: the plugin owns the Laya Go Launcher background server
+# (started through `ctx.subprocess`, so teardown kills the whole process range)
+# and registers the model-facing decision tools on `ctx.tools`.
+#
+# A patch replaces the targeted row's whole `config`, so a profile overriding
+# this row by id must restate every key it keeps. Only the values a deployment
+# is likely to keep are listed here; the rest come from the plugin's schema.
+- insert:
+    - id: laya-go-decision
+      name: dsh-laya-go-decision
+      config:
+        # `managed` starts and stops layatrt-server.exe with the harness;
+        # `external` only talks to a server the user already runs.
+        mode: managed
+        baseUrl: http://127.0.0.1:8420
+        # Absolute path, or a bare name resolved against PATH.
+        executable: layatrt-server.exe
+        # Deployment-specific launcher flags. `--addr` is derived from
+        # `baseUrl` unless it appears here.
+        args:
+          # Never start a multi-minute TensorRT build just because the plugin
+          # loaded; re-enable by removing this flag.
+          - --no-convert
+        # Start the server on the first decision call instead of at load time.
+        autoStart: true
+        # Answers at or above this confidence are marked `certain`.
+        confidenceThreshold: 0.5

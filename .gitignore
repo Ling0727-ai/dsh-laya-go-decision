@@ -1,0 +1,8 @@
+node_modules/
+*.tsbuildinfo
+.DS_Store
+
+# `lib/` is intentionally tracked: the built entry is what a `link:` or
+# `github:` install resolves, matching the sibling DSH plugins in this
+# collection. Run `pnpm build` after changing `src/` so the committed output
+# never drifts from the source.
